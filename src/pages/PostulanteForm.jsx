@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+//import React, { useState } from 'react';
 import { API_URL } from '../constants';
 
 export default function PostulanteForm() {
@@ -49,6 +50,7 @@ export default function PostulanteForm() {
                 setMensaje({ texto: resultado.message || 'Error en los datos', esExitoso: false });
             }
         } catch (error) {
+            console.error("Error de conexión:", error);
             setMensaje({ texto: 'Error de conexión con el servidor backend', esExitoso: false });
         } finally {
             setCargando(false);

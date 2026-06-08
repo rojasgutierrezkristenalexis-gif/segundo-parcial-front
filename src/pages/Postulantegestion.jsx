@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+//import React, { useState } from 'react';
 import { API_URL } from '../constants';
 
 export default function PostulanteGestion() {
@@ -23,10 +24,12 @@ export default function PostulanteGestion() {
                 setPostulante(null);
                 setMensaje({ texto: res.message, esExitoso: false });
             }
-        } catch (error) {
+        } catch (err) {
+            console.error("Error de conexión:", err);
             setMensaje({ texto: 'Error al conectar con el servidor', esExitoso: false });
         }
     };
+
 
     // CU12: Guardar cambios del Postulante (Update)
     const guardarCambios = async () => {
@@ -45,7 +48,8 @@ export default function PostulanteGestion() {
                 setMensaje({ texto: res.message, esExitoso: false });
             }
         } catch (error) {
-            setMensaje({ texto: 'Error al actualizar', esExitoso: false });
+        console.error("Detalle del error:", error); // Esto usa la variable 'error' y soluciona el aviso de ESLint
+        setMensaje({ texto: 'Error al actualizar', esExitoso: false });
         }
     };
 
@@ -65,6 +69,7 @@ export default function PostulanteGestion() {
                 setSearchCi('');
             }
         } catch (error) {
+            console.error("Detalle del error:", error); // Esto usa la variable 'error' y soluciona el aviso de ESLint
             setMensaje({ texto: 'Error al eliminar', esExitoso: false });
         }
     };

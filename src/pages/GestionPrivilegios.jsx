@@ -1,29 +1,22 @@
-import React, { useState, useEffect } from 'react';
+//import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { API_URL } from '../constants';
 
 export default function GestionPrivilegios() {
     const [roles, setRoles] = useState([]);
     const [selectedRolId, setSelectedRolId] = useState('');
     const [privilegios, setPrivilegios] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [guardando, setGuardando] = useState(false);
     const [mensaje, setMensaje] = useState({ texto: '', tipo: '' }); // tipo: 'exito' | 'error'
 
-    // Cargar los roles disponibles
-    useEffect(() => {
-        obtenerRoles();
+    const mostrarMensaje = useCallback((texto, tipo) => {
+        setMensaje({ texto, tipo });
+        const timer = setTimeout(() => setMensaje({ texto: '', tipo: '' }), 6000);
+        return () => clearTimeout(timer);
     }, []);
 
-    // Cargar los privilegios cada vez que se cambia de rol
-    useEffect(() => {
-        if (selectedRolId) {
-            obtenerPrivilegios(selectedRolId);
-        } else {
-            setPrivilegios([]);
-        }
-    }, [selectedRolId]);
-
-    const obtenerRoles = async () => {
+    const obtenerRoles = useCallback(async () => {
         try {
             const response = await fetch(`${API_URL}/roles`);
             const res = await response.json();
@@ -33,11 +26,12 @@ export default function GestionPrivilegios() {
                 mostrarMensaje('Error al obtener roles', 'error');
             }
         } catch (error) {
+            console.error("Error de conexión:", error);
             mostrarMensaje('Error de conexión con el backend', 'error');
         }
-    };
+    }, [mostrarMensaje]);
 
-    const obtenerPrivilegios = async (rolId) => {
+    const obtenerPrivilegios = useCallback(async (rolId) => {
         setLoading(true);
         setMensaje({ texto: '', tipo: '' });
         try {
@@ -49,16 +43,46 @@ export default function GestionPrivilegios() {
                 mostrarMensaje(res.message || 'Error al obtener privilegios', 'error');
             }
         } catch (error) {
+            console.error("Error de conexión:", error);
             mostrarMensaje('Error al conectar con el servidor', 'error');
         } finally {
             setLoading(false);
         }
-    };
+    }, [mostrarMensaje]);
 
-    const mostrarMensaje = (texto, tipo) => {
-        setMensaje({ texto, tipo });
-        setTimeout(() => setMensaje({ texto: '', tipo: '' }), 6000);
-    };
+    // Uso en useEffect
+        useEffect(() => {
+        let active = true;
+
+        // Creamos una función asíncrona interna para manejar la lógica
+        const fetchData = async () => {
+            // Solo llamamos a la función si el componente sigue montado
+            if (active) {
+                await obtenerRoles();
+            }
+        };
+
+        fetchData();
+
+        // Función de limpieza: se ejecuta cuando el componente se desmonta
+        return () => {
+            active = false;
+        };
+    }, [obtenerRoles]);
+
+    useEffect(() => {
+    // Usar un temporizador de 0ms mueve la ejecución al final del ciclo de renderizado,
+    // evitando que React detecte la actualización síncrona como un "cascading render".
+    const timer = setTimeout(() => {
+        if (selectedRolId) {
+            obtenerPrivilegios(selectedRolId);
+        } else {
+            setPrivilegios([]);
+        }
+    }, 0);
+
+        return () => clearTimeout(timer); // Limpieza para evitar errores si el componente se desmonta
+    }, [selectedRolId, obtenerPrivilegios]);
 
     const handleCheckboxChange = (id) => {
         setPrivilegios(privilegios.map(priv => 
@@ -99,6 +123,7 @@ export default function GestionPrivilegios() {
                 mostrarMensaje(res.message || 'Error al guardar los privilegios', 'error');
             }
         } catch (error) {
+            console.error("Error de conexión:", error);
             mostrarMensaje('Error de conexión con el backend', 'error');
         } finally {
             setGuardando(false);

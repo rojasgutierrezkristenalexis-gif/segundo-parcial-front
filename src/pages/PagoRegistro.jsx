@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+//import React, { useState } from 'react';
 import { API_URL } from '../constants';
 
 export default function PagoRegistro() {
@@ -45,6 +46,7 @@ export default function PagoRegistro() {
                 setMensaje({ texto: res.message, esExitoso: false });
             }
         } catch (error) {
+            console.error("Error de conexión:", error);
             setMensaje({ texto: 'Error de conexión con el servidor', esExitoso: false });
         }
     };
