@@ -1,62 +1,88 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/authprovider';
+import Layout from './components/Layout';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import PostulanteGestion from './pages/Postulantegestion';
 import PostulanteForm from './pages/PostulanteForm';
-import PostulanteGestion from './pages/PostulanteGestion';
 import PagoRegistro from './pages/PagoRegistro';
 import GestionRoles from './pages/GestionRoles';
 import GestionPrivilegios from './pages/GestionPrivilegios';
 
-function App() {
-  // Estado para saber qué pestaña mostrar
-  const [tab, setTab] = useState('registro');
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar con las 5 opciones */}
-      <nav className="bg-indigo-700 p-4 shadow-md">
-        <div className="container mx-auto flex gap-4 justify-center flex-wrap">
-          <button 
-            onClick={() => setTab('registro')}
-            className={`text-white font-bold px-4 py-2 rounded-lg transition-all cursor-pointer ${tab === 'registro' ? 'bg-indigo-950 shadow-inner border border-indigo-500' : 'hover:bg-indigo-650'}`}
-          >
-            CU11: Registrar
-          </button>
-          <button 
-            onClick={() => setTab('gestion')}
-            className={`text-white font-bold px-4 py-2 rounded-lg transition-all cursor-pointer ${tab === 'gestion' ? 'bg-indigo-950 shadow-inner border border-indigo-500' : 'hover:bg-indigo-650'}`}
-          >
-            CU12-14: Gestión
-          </button>
-          <button 
-            onClick={() => setTab('pago')}
-            className={`text-white font-bold px-4 py-2 rounded-lg transition-all cursor-pointer ${tab === 'pago' ? 'bg-indigo-950 shadow-inner border border-indigo-500' : 'hover:bg-indigo-650'}`}
-          >
-            CU10: Registrar Pago
-          </button>
-          <button 
-            onClick={() => setTab('roles')}
-            className={`text-white font-bold px-4 py-2 rounded-lg transition-all cursor-pointer ${tab === 'roles' ? 'bg-indigo-950 shadow-inner border border-indigo-500' : 'hover:bg-indigo-650'}`}
-          >
-            CU05: Gestión de Roles
-          </button>
-          <button 
-            onClick={() => setTab('privilegios')}
-            className={`text-white font-bold px-4 py-2 rounded-lg transition-all cursor-pointer ${tab === 'privilegios' ? 'bg-indigo-950 shadow-inner border border-indigo-500' : 'hover:bg-indigo-650'}`}
-          >
-            CU06: Asignar Privilegios
-          </button>
-        </div>
-      </nav>
-
-      {/* Contenido dinámico */}
-      <div className="container mx-auto px-4 py-8">
-        {tab === 'registro' && <PostulanteForm />}
-        {tab === 'gestion' && <PostulanteGestion />}
-        {tab === 'pago' && <PagoRegistro />}
-        {tab === 'roles' && <GestionRoles />}
-        {tab === 'privilegios' && <GestionPrivilegios />}
-      </div>
-    </div>
-  );
+// Componente para proteger rutas de accesos no autenticados
+function ProtectedRoute({ children }) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        return <Navigate to="/login" replace />;
+    }
+    return children;
 }
 
-export default App;
+// Componente para restringir vistas basadas en privilegios
+function PrivilegeProtectedRoute({ privilege, children }) {
+    const userString = localStorage.getItem('user');
+    if (!userString) {
+        return <Navigate to="/login" replace />;
+    }
+    
+    try {
+        const user = JSON.parse(userString);
+        const hasPrivilege = user?.privilegios?.includes(privilege);
+        if (!hasPrivilege) {
+            return <Navigate to="/dashboard" replace />;
+        }
+    } catch (e) {
+        return <Navigate to="/login" replace />;
+    }
+
+    return children;
+}
+
+export default function App() {
+    return (
+        <AuthProvider>
+            <BrowserRouter>
+                <Routes>
+                    {/* Ruta de Login */}
+                    <Route path="/login" element={<Login />} />
+
+                    {/* Rutas Privadas envueltas en el Layout */}
+                    <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        
+                        <Route path="/postulantes" element={
+                            <PrivilegeProtectedRoute privilege="registrar_postulantes">
+                                <div className="space-y-8 max-w-4xl mx-auto">
+                                    <PostulanteForm />
+                                    <PostulanteGestion />
+                                </div>
+                            </PrivilegeProtectedRoute>
+                        } />
+                        
+                        <Route path="/pagos" element={
+                            <PrivilegeProtectedRoute privilege="registrar_pagos">
+                                <PagoRegistro />
+                            </PrivilegeProtectedRoute>
+                        } />
+
+                        <Route path="/roles" element={
+                            <PrivilegeProtectedRoute privilege="gestionar_usuarios">
+                                <GestionRoles />
+                            </PrivilegeProtectedRoute>
+                        } />
+
+                        <Route path="/privilegios" element={
+                            <PrivilegeProtectedRoute privilege="gestionar_usuarios">
+                                <GestionPrivilegios />
+                            </PrivilegeProtectedRoute>
+                        } />
+                    </Route>
+
+                    {/* Redirección por defecto */}
+                    <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                </Routes>
+            </BrowserRouter>
+        </AuthProvider>
+    );
+}
